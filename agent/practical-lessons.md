@@ -39,16 +39,15 @@ Building an AI system that converts natural language requirements into executabl
     *   *Fix*: Strict prompt constraints (forbidding Markdown blocks).
     *   *Fix*: "Few-shot" examples specifically for complex operators like Window Functions.
 
-## 3. RAG vs. Context Engineering
-
-*   **Medical Knowledge Graph**: Integrated **Neo4j** for structured entity mapping (SDTM standards), enabling precise queries (CQL) where Vector Search (FAISS) was too fuzzy/inaccurate.
-*   **Context Optimization**:
-    *   Explored "Context Compression" similar to **Claude Code**: Instead of dumping all files into context, simulate a "grep" process where the agent explores the file tree first, then reads specific files.
-
-## 4. Prompt Engineering Patterns for Reliability
-
+### Prompt Patterns
 *   **Double-Layer Interaction**:
     *   **Layer 1 (Clarification)**: Agent converses with user to clarify requirements (Ambiguity Resolution).
     *   **Layer 2 (Execution)**: Once requirements are locked, `Planner` and `Executor` take over to generate code.
 *   **Structured Constraints**:
     *   Instead of letting the LLM generate the full final JSON directly, split it into atomic "Actions" or "Steps" that a deterministic code engine then assembles.
+
+## 3. RAG vs. Context Engineering
+
+*   **Medical Knowledge Graph**: Integrated **Neo4j** for structured entity mapping (SDTM standards), enabling precise queries (CQL) where Vector Search (FAISS) was too fuzzy/inaccurate.
+*   **Context Optimization**:
+    *   Explored "Context Compression" similar to **Claude Code**: Instead of dumping all files into context, simulate a "grep" process where the agent explores the file tree first, then reads specific files.
