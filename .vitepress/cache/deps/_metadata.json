@@ -1,0 +1,88 @@
+{
+  "hash": "94922fb7",
+  "configHash": "65e78f28",
+  "lockfileHash": "d969476a",
+  "browserHash": "48db6936",
+  "optimized": {
+    "vue": {
+      "src": "../../../node_modules/vue/dist/vue.runtime.esm-bundler.js",
+      "file": "vue.js",
+      "fileHash": "3e8c4ef4",
+      "needsInterop": false
+    },
+    "vitepress > @vue/devtools-api": {
+      "src": "../../../node_modules/@vue/devtools-api/dist/index.js",
+      "file": "vitepress___@vue_devtools-api.js",
+      "fileHash": "c23558ae",
+      "needsInterop": false
+    },
+    "vitepress > @vueuse/core": {
+      "src": "../../../node_modules/@vueuse/core/index.mjs",
+      "file": "vitepress___@vueuse_core.js",
+      "fileHash": "60efdbd5",
+      "needsInterop": false
+    },
+    "@braintree/sanitize-url": {
+      "src": "../../../node_modules/@braintree/sanitize-url/dist/index.js",
+      "file": "@braintree_sanitize-url.js",
+      "fileHash": "0a317176",
+      "needsInterop": true
+    },
+    "dayjs": {
+      "src": "../../../node_modules/dayjs/dayjs.min.js",
+      "file": "dayjs.js",
+      "fileHash": "42f77486",
+      "needsInterop": true
+    },
+    "cytoscape-cose-bilkent": {
+      "src": "../../../node_modules/cytoscape-cose-bilkent/cytoscape-cose-bilkent.js",
+      "file": "cytoscape-cose-bilkent.js",
+      "fileHash": "73e6045f",
+      "needsInterop": true
+    },
+    "cytoscape": {
+      "src": "../../../node_modules/cytoscape/dist/cytoscape.esm.mjs",
+      "file": "cytoscape.js",
+      "fileHash": "b8a43b84",
+      "needsInterop": false
+    },
+    "@theme/index": {
+      "src": "../../../node_modules/vitepress/dist/client/theme-default/index.js",
+      "file": "@theme_index.js",
+      "fileHash": "60ac572d",
+      "needsInterop": false
+    },
+    "dayjs/plugin/isoWeek.js": {
+      "src": "../../../node_modules/dayjs/esm/plugin/isoWeek/index.js",
+      "file": "dayjs_plugin_isoWeek__js.js",
+      "fileHash": "81771c0b",
+      "needsInterop": false
+    },
+    "dayjs/plugin/customParseFormat.js": {
+      "src": "../../../node_modules/dayjs/esm/plugin/customParseFormat/index.js",
+      "file": "dayjs_plugin_customParseFormat__js.js",
+      "fileHash": "f76325a6",
+      "needsInterop": false
+    },
+    "dayjs/plugin/advancedFormat.js": {
+      "src": "../../../node_modules/dayjs/esm/plugin/advancedFormat/index.js",
+      "file": "dayjs_plugin_advancedFormat__js.js",
+      "fileHash": "d6d1d93a",
+      "needsInterop": false
+    }
+  },
+  "chunks": {
+    "chunk-QNAROPK2": {
+      "file": "chunk-QNAROPK2.js"
+    },
+    "chunk-LJKO4TMH": {
+      "file": "chunk-LJKO4TMH.js"
+    },
+    "chunk-QE257C5J": {
+      "file": "chunk-QE257C5J.js"
+    },
+    "chunk-BUSYA2B4": {
+      "file": "chunk-BUSYA2B4.js"
+    }
+  }
+}
