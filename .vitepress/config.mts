@@ -5,6 +5,7 @@ import { withMermaid } from 'vitepress-plugin-mermaid'
 export default withMermaid({
   title: "HZ's AI notes",
   description: "HZ's AI notes",
+  base: '/AI-Notes/',
   markdown: {
     math: true
   },
