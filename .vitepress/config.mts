@@ -33,7 +33,8 @@ export default withMermaid({
         {
           text: 'AI Agents',
           items: [
-            { text: 'Overview', link: '/agent/' }
+            { text: 'Overview', link: '/agent/' },
+            { text: 'Practical Lessons / Case Studies', link: '/agent/practical-lessons' }
           ]
         }
       ],
