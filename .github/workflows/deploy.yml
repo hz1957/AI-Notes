@@ -4,7 +4,7 @@ name: Deploy VitePress site to Pages
 on:
   # Trigger on push to master branch
   push:
-    branches: [master]
+    branches: [master, main]
 
   # Allow manual trigger
   workflow_dispatch:
