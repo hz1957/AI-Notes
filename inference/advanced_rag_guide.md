@@ -1,10 +1,5 @@
 # Advanced Retrieval-Augmented Generation: A Comprehensive Engineering Guide
 
-> **Author**: Haoming Zhang (Assisted by Gemini)
-> **Version**: 1.0
-> **Last Updated**: 2025-12-26
-> **Target Audience**: AI Engineers, NLP Researchers, System Architects
-
 ---
 
 ## 1. Introduction: The "Open Book" Paradigm Shift

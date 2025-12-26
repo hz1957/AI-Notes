@@ -49,8 +49,8 @@ export default withMermaid({
             { text: 'Parallelism Strategies', link: '/inference/parallelism' },
             { text: 'Serving Techniques', link: '/inference/serving-techniques' },
             { text: 'Speculative Decoding', link: '/inference/speculative-decoding' },
-            { text: 'SGLang Configuration', link: '/inference/sglang-guide' },
-            { text: 'Advanced RAG Guide', link: '/inference/advanced_rag_guide' }
+            { text: 'Advanced RAG Guide', link: '/inference/advanced_rag_guide' },
+            { text: 'SGLang Configuration', link: '/inference/sglang-guide' }
           ]
         }
       ]
