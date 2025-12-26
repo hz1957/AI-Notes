@@ -12,12 +12,12 @@ Welcome to **HZ's AI Notes**. This knowledge base is organized into three main e
 
 ## 2. LLM Inference
 *Deploying massive models efficiently.*
-> [Enter Inference Section](/generation-parameters)
+> [Enter Inference Section](/inference/)
 
-*   **Basics**: [Generation Parameters](/generation-parameters) (Greedy, Top-P, Temp).
-*   **Architecture**: [KV CacheStrategies](/kv-cache) & [Model Optimization](/model-optimization) (Quantization).
-*   **Scale**: [Parallelism Strategies](/parallelism) (TP/PP/SP).
-*   **System**: [Serving Techniques](/serving-techniques) & [SGLang Configuration](/sglang-guide).
+*   **Basics**: [Generation Parameters](/inference/generation-parameters) (Greedy, Top-P, Temp).
+*   **Architecture**: [KV CacheStrategies](/inference/kv-cache) & [Model Optimization](/inference/model-optimization) (Quantization).
+*   **Scale**: [Parallelism Strategies](/inference/parallelism) (TP/PP/SP).
+*   **System**: [Serving Techniques](/inference/serving-techniques) & [SGLang Configuration](/inference/sglang-guide).
 
 ## 3. AI Agents
 *Building autonomous systems.*
