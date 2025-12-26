@@ -6,6 +6,7 @@ export default withMermaid({
   title: "HZ's AI notes",
   description: "HZ's AI notes",
   base: '/AI-Notes/',
+  srcExclude: ['**/references/**'],
   markdown: {
     math: true
   },
@@ -14,7 +15,7 @@ export default withMermaid({
     nav: [
       { text: 'Home', link: '/' },
       { text: 'Training', link: '/training/' },
-      { text: 'Inference', link: '/generation-parameters' },
+      { text: 'Inference', link: '/inference/' },
       { text: 'Agent', link: '/agent/' }
     ],
 
@@ -38,17 +39,17 @@ export default withMermaid({
           ]
         }
       ],
-      '/': [
+      '/inference/': [
         {
           text: 'LLM Inference Optimization',
           items: [
-            { text: 'Generation Parameters', link: '/generation-parameters' },
-            { text: 'KV Cache Strategies', link: '/kv-cache' },
-            { text: 'Model Optimization', link: '/model-optimization' },
-            { text: 'Parallelism Strategies', link: '/parallelism' },
-            { text: 'Serving Techniques', link: '/serving-techniques' },
-            { text: 'Speculative Decoding', link: '/speculative-decoding' },
-            { text: 'SGLang Configuration', link: '/sglang-guide' }
+            { text: 'Generation Parameters', link: '/inference/generation-parameters' },
+            { text: 'KV Cache Strategies', link: '/inference/kv-cache' },
+            { text: 'Model Optimization', link: '/inference/model-optimization' },
+            { text: 'Parallelism Strategies', link: '/inference/parallelism' },
+            { text: 'Serving Techniques', link: '/inference/serving-techniques' },
+            { text: 'Speculative Decoding', link: '/inference/speculative-decoding' },
+            { text: 'SGLang Configuration', link: '/inference/sglang-guide' }
           ]
         }
       ]
