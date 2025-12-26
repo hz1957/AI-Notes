@@ -1,7 +1,5 @@
 # Advanced Retrieval-Augmented Generation: A Comprehensive Engineering Guide
 
----
-
 ## 1. Introduction: The "Open Book" Paradigm Shift
 
 The emergence of Large Language Models (LLMs) like GPT-4, Claude 3, and Gemini has fundamentally reshaped our interaction with information. These models exhibit "sparkles of AGI" in reasoning, code generation, and creative writing. However, as they transitioned from research labs to enterprise production environments, a critical limitation became undeniable: **Knowledge Boundaries**.
