@@ -35,7 +35,8 @@ export default withMermaid({
           text: 'AI Agents',
           items: [
             { text: 'Overview', link: '/agent/' },
-            { text: 'Practical Lessons / Case Studies', link: '/agent/practical-lessons' }
+            { text: 'Practical Lessons / Case Studies', link: '/agent/practical-lessons' },
+            { text: 'Architecture Patterns', link: '/agent/architecture-patterns' }
           ]
         }
       ],
@@ -50,7 +51,8 @@ export default withMermaid({
             { text: 'Serving Techniques', link: '/inference/serving-techniques' },
             { text: 'Speculative Decoding', link: '/inference/speculative-decoding' },
             { text: 'Advanced RAG Guide', link: '/inference/advanced_rag_guide' },
-            { text: 'SGLang Configuration', link: '/inference/sglang-guide' }
+            { text: 'SGLang Configuration', link: '/inference/sglang-guide' },
+            { text: 'Performance & Tuning', link: '/inference/performance-tuning' }
           ]
         }
       ]
