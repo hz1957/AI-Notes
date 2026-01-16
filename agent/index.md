@@ -7,3 +7,4 @@ Future topics:
 *   Tool Use
 *   Memory Systems
 *   Multi-Agent Frameworks
+*   [Enterprise Skills Framework](./enterprise-skills-framework.md)

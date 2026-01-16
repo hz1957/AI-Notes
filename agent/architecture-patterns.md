@@ -1,16 +1,21 @@
 # Agent Architecture Patterns
 
-## 1. “685B + 小模型协同”架构 (For SQL / ETL)
+This document outlines high-performance architecture patterns for building enterprise-grade AI agents, focusing on cost-efficiency, latency reduction, and reliability.
 
-### 核心目标
-让 **685B** 只做最值钱的推理，把高频、低难度、结构化的部分交给 **小模型/规则/工具**，显著减少：
-1.  685B 的调用次数。
-2.  每次调用的上下文长度。
-3.  长上下文 Prefill 次数。
+## 1. Hybrid Architecture: Heavy Reasoning Model + Small Specialist (For SQL / ETL)
+
+### 🎯 Core Objective
+The goal is to treat the **Large Model (e.g., 685B parameter models)** as a scarce, expensive "Reasoning Core", while offloading high-frequency, low-entropy, and structured tasks to **Small Models (7B~32B), Rules, or Heuristics**.
+
+This strategy significantly reduces:
+1.  **Call Frequency** to the large model.
+2.  **Context Length** per call (by filtering noise upstream).
+3.  **Prefill Latency** (the most expensive part of long-context inference).
 
 ---
 
-### 推荐架构图
+### 🏗️ Architecture Diagram
+
 ```mermaid
 flowchart LR
   UI[User Chat UI] --> ORCH[Orchestrator<br/>Conversation State + Budget]
@@ -18,7 +23,7 @@ flowchart LR
   SM --> RET[Schema Retriever<br/>(BM25/Embedding)]
   RET --> PLAN[Schema-aware Plan JSON<br/>tables/fields/joins]
   PLAN --> UI_CONFIRM[User Confirm / Edit]
-  UI_CONFIRM -->|approved| BIG[DeepSeek 685B<br/>Final SQL + Hard Reasoning]
+  UI_CONFIRM -->|approved| BIG[Large Reasoning Model (685B)<br/>Final SQL + Complex Reasoning]
   BIG --> VALID[SQL Validator<br/>Parser + Static checks]
   VALID --> EXEC[DB Sandbox<br/>EXPLAIN / LIMIT 10]
   EXEC --> FIX[Error/Trace to Fix Loop<br/>(Small model first)]
@@ -33,26 +38,34 @@ flowchart LR
   end
 ```
 
-### 核心策略 (Key Principles)
+### 🧠 Key Strategies
 
-#### 1. "Schema-aware Plan" 放在小模型侧
-不要直接让 685B 从全量 Schema 里挑表。
-*   **做法**：让小模型 + Retriever 生成一个 `Plan JSON`（包含相关的 top-K 表、字段建议）。
-*   **收益**：685B 永远只看到经过筛选的、极小的 Schema 子集，**避免了每次都 Prefill 40k+ tokens**。
+#### 1. "Schema-aware Plan" on the Edge (Small Model)
+**Anti-Pattern**: Dumping the entire 500-table schema into the 685B model's context for every query.
+*   **Strategy**: Use a Small Model + Retriever (RAG) to generate a lightweight `Plan JSON`. This plan contains only the *relevant* top-K tables and field suggestions.
+*   **Impact**: The large model only sees a highly filtered, semantic subset of the schema. This **avoids prefilling 40k+ tokens** for every turn, which is the primary bottleneck in high-throughput systems.
 
-#### 2. “确认后”再调用大模型
-把“用户需求确认”前置。
-*   **做法**：小模型生成初步计划后，让用户确认/修改（UI 层面）。只有用户点了“Proceed”，才把清洗好的 Context 喂给 685B。
-*   **收益**：消除了大量因需求模糊导致的 685B 无效调用。
+#### 2. "Confirm then Execute" (Human-in-the-Loop)
+**Anti-Pattern**: "Fire and Forget" complex queries which leads to expensive regeneration loops when the intent is misunderstood.
+*   **Strategy**: Placing the "User Confirmation" step *after* the planning phase but *before* the heavy SQL generation. The user reviews the `Plan Draft`. Only upon "Proceed" is the sanitized context sent to the 685B model.
+*   **Impact**: Eliminates invalid calls caused by ambiguous requirements, acting as a gatekeeper for the expensive compute resource.
 
-#### 3. 分级修错 Loop
-*   **90% 的错误**：字段名拼错、SQL 语法微小错误、Join 键类型不匹配。
-    *   **处理**：交给小模型看 Error Log 即可修好，无需动用 685B。
-*   **10% 的错误**：逻辑错误、业务理解偏差（窗口函数用错、嵌套层级不对）。
-    *   **处理**：才 escalate 给 685B。
+#### 3. Tiered Error Correction Loop (L1/L2 Support)
+**Anti-Pattern**: Using the 685B model to fix simple syntax errors or typos.
+*   **Strategy**:
+    *   **Tier 1 (90% of errors)**: Syntax typos, wrong column names, simple type mismatches.
+        *   *Handler*: **Small Model (CodeLLaMA, DeepSeek-Coder-33B)** reading the Error Log.
+    *   **Tier 2 (10% of errors)**: Logic flaws, wrong window functions, misunderstanding business rules.
+        *   *Handler*: **Escalate to Large Model (685B)**.
+*   **Impact**: Drastically lowers average cost per successful query.
 
-### 落地建议（立刻能做的两步）
-1.  **降并非**：把并发 agent 从 20 降到 **2~4**（针对长上下文调用 685B 的那一段）。
-2.  **Schema 预处理**：把“选表”任务剥离给小模型 + 检索，685B 只在用户确认 Plan 后介入。
+---
 
-这两步通常就能把“没排队但很慢”的现象明显改善。
+### 🚀 Immediate Implementation Steps
+
+1.  **Concurrency Throttling**:
+    Reduce the concurrency limit for the **Large Model** specific path from ~20 to **2~4 per replica**. Long-context prefill is compute-intensive; high concurrency causes "invisible congestion" (KV cache thrashing and attention latency).
+2.  **Schema Pre-processing**:
+    Decouple the "Table Selection" task. Move it entirely to a Small Model pipeline. Ensure the Large Model never sees the full raw schema database, only the refined selection.
+
+These two changes typically resolve the "no queue but high latency" phenomenon in production ETL agents.

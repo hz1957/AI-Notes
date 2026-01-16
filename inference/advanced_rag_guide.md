@@ -335,9 +335,9 @@ sequenceDiagram
     A->>T1: Query Acme Revenue
     T1-->>A: $100M
     A->>T1: Query Acme Departments
-    T1-->>A: [Sales, Eng, HR]
+    T1-->>A: Sales, Eng, HR
     A->>T2: Find generic competitor structure
-    T2-->>A: Typical structure: [Sales, R&D, Ops]
+    T2-->>A: Typical structure: Sales, R&D, Ops
     A-->>U: Synthesized comparison
 ```
 
