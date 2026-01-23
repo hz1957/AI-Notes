@@ -18,14 +18,14 @@ This architectural reality leads to the **Hallucination** problem. When the comp
 
 ```mermaid
 graph TD
-    A[User Query] --> B{Paradigm}
-    B -- Standard LLM --> C[Internal Weights]
-    C --> D[Hallucination Risk]
+    A["User Query"] --> B{"Paradigm"}
+    B -- "Standard LLM" --> C["Internal Weights"]
+    C --> D["Hallucination Risk"]
     
-    B -- RAG --> E[Retriever]
-    E --> F[Vector DB]
-    F -->|Context| G[LLM Context Window]
-    G --> H[Grounded Answer]
+    B -- "RAG" --> E["Retriever"]
+    E --> F["Vector DB"]
+    F -->|"Context"| G["LLM Context Window"]
+    G --> H["Grounded Answer"]
 ```
 
 ### 1.2 Core Problems Solved by RAG

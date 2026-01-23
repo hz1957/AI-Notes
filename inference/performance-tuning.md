@@ -18,21 +18,21 @@
 ### 阻塞流程图
 ```mermaid
 flowchart TD
-  U[20 agents x (10~20) calls] --> GW[Gateway / SGLang Frontend]
-  GW -->|看起来: 无排队| SCHED[SGLang Scheduler<br/>continuous batching]
-  SCHED --> PREFILL[Prefill: ingest ~40k ctx<br/>Attention heavy]
-  PREFILL --> KV[KV cache write/read<br/>HBM bandwidth bound]
-  KV --> TP[Tensor Parallel AllReduce]
-  TP --> PP[Pipeline Parallel Send/Recv]
-  PP --> GPU[GPU compute kernels<br/>(FlashAttn/GEMM)]
-  GPU --> OUT[Token stream / response]
+  U["20 agents x (10~20) calls"] --> GW["Gateway / SGLang Frontend"]
+  GW -->|看起来: 无排队| SCHED["SGLang Scheduler<br/>continuous batching"]
+  SCHED --> PREFILL["Prefill: ingest ~40k ctx<br/>Attention heavy"]
+  PREFILL --> KV["KV cache write/read<br/>HBM bandwidth bound"]
+  KV --> TP["Tensor Parallel AllReduce"]
+  TP --> PP["Pipeline Parallel Send/Recv"]
+  PP --> GPU["GPU compute kernels<br/>(FlashAttn/GEMM)"]
+  GPU --> OUT["Token stream / response"]
 
-  subgraph "你日志里通常只显示这里"
+  subgraph LogView ["你日志里通常只显示这里"]
     GW
     SCHED
   end
 
-  subgraph "真正的阻塞多发生在这里（日志常不直接报“排队”）"
+  subgraph RealBottleneck ["真正的阻塞多发生在这里（日志常不直接报“排队”）"]
     PREFILL
     KV
     TP

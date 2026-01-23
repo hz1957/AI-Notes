@@ -34,6 +34,52 @@ def should_decompose(task, available_tools):
 - No single tool provides adequate coverage
 - High failure rate in similar historical tasks
 
+**Deep Dive: Is this logic an LLM Black Box?**
+
+**Conclusion:**
+👉 **Not necessarily.**
+👉 Moreover, in a "mature system", it **should not** be entirely an LLM black box.
+
+**1. Component Analysis: Where should LLMs be used?**
+
+**A. `calculate_complexity(task)`**
+Two implementation routes:
+*   ❌ **Black Box Approach (Not Recommended)**: Asking LLM "Please judge the complexity of this task, return 0–1".
+    *   **Issues**: Unstable, unexplainable, cannot be tuned.
+*   ✅ **Engineering Approach (Recommended)**:
+    ```python
+    complexity = w1 * token_length + w2 * constraint_count + w3 * step_keywords + w4 * ambiguity_score
+    ```
+    *   👉 **Rule + Statistics**
+    *   👉 **Explainable**
+    *   👉 **Tunable thresholds**
+    *   **LLM Role**: Can assist in data annotation or identifying "multi-step" features, but **does not directly make the final judgment**.
+
+**B. `find_best_tool_match(...)`**
+This is the core of the Agent system and should not be a pure black box.
+*   **Common Structure**:
+    `Task` → `Embedding / Keyword / Schema Match` → `Top-K Candidate Tools` → `LLM / Scorer Rerank` → `Confidence`
+*   👉 **LLM is only used for reranking / explanation.**
+*   👉 **The final score is structured.**
+
+**C. `requires_multiple_tool_types()`**
+This **almost should not** use an LLM.
+*   **Recommended**: Keyword rules (select + validate + explain), DAG template matching, tool capability graph.
+*   👉 **This is the planner's job, not the generator's job.**
+
+**2. The Real Position of This Code in Agent Architecture**
+This code is not "intelligence", it is the **"Rationality Layer / Scheduling Layer"** of the Agent.
+
+**Architecture Flow**:
+```mermaid
+graph TD
+    Request["User Request"] --> Analysis["Task Analysis"]
+    Analysis --> Decide["**should_decompose**"]
+    Decide --> Planner["Planner (Generate Subtask DAG)"]
+    Planner --> Executor["Executor (Call Tools / LLM)"]
+```
+👉 **This is the layer used to "prevent the LLM from going off-track".**
+
 ### 2. What are the criteria for task complexity? Are there clear thresholds?
 
 **Quantitative Metrics:**
@@ -50,6 +96,37 @@ def should_decompose(task, available_tools):
 - **Simple**: Single objective, direct tool mapping, low ambiguity
 - **Medium**: 2-3 objectives, requires planning, moderate ambiguity
 - **Complex**: >3 objectives, multi-stage execution, high ambiguity
+
+**Deep Dive: Calculating Complexity - Rules vs. LLMs**
+
+**The Engineering Challenge:**
+Relying entirely on an LLM to "feel" the complexity leads to high latency and non-deterministic behavior.
+
+**Recommended "Fast-Path" Implementation:**
+```python
+def fast_complexity_check(text):
+    # 1. Deterministic Signals (No LLM)
+    # Count action verbs (using lightweight NLP like spaCy)
+    verb_count = len([token for token in nlp(text) if token.pos_ == "VERB"])
+    
+    # Check for "batch" keywords
+    has_batch = any(w in text for w in ["each", "every", "all", "list of"])
+    
+    # Check for conditional keywords
+    has_logic = any(w in text for w in ["if", "when", "unless", "depends"])
+    
+    # 2. Heuristic Scoring
+    score = (verb_count * 1.5) + (3.0 if has_batch else 0) + (2.0 if has_logic else 0)
+    
+    # 3. Decision
+    if score > 5.0:
+        return Complexity.HIGH # Force Planner
+    elif score > 2.0:
+        return Complexity.MEDIUM
+    else:
+        return Complexity.LOW # Direct Execution
+```
+👉 **Why?**: This runs in milliseconds on CPU and filters 80% of trivial requests, saving expensive LLM calls for truly complex planning.
 
 ### 3. How are task decomposition hierarchies designed? What level is reasonable?
 
@@ -182,6 +259,26 @@ def select_tool(task, available_tools):
     
     return max(candidates, key=lambda x: x[1])[0]
 ```
+
+**Deep Dive: Where do these weights come from?**
+
+**1. The Cold Start Phase (Heuristic Tuning)**
+Initially, weights like `0.4` for semantic similarity are educated guesses.
+*   **Semantic Score (0.4)**: High weight because if the description doesn't match, nothing else matters.
+*   **Capability Match (0.3)**: Ensures technical feasibility (e.g., parameter types match).
+*   **History (0.2)**: Lower initially because history is sparse.
+
+**2. The Mature System (Learning to Rank)**
+As you gather logs, **stop using hardcoded weights**. Move to a "Rerank Model".
+*   **Logistic Regression / XGBoost**:
+    *   Features: `[similarity_score, execution_time_avg, failure_rate_last_24h, is_deprecated]`
+    *   Target: `1` if user accepted/tool succeeded, `0` otherwise.
+*   **LambdaMART**: For list-wise ranking (optimizing NDCG).
+
+**3. Application Architecture**:
+*   **Bi-Encoder (Vector DB)**: Fast retrieval of top-50 candidates.
+*   **Cross-Encoder (Reranker)**: Precise scoring of top-10 using the heavy feature set above.
+👉 **Pro Tip**: Don't let the LLM pick from 100 tools. Use the Reranker to give the LLM the best 3-5 tools.
 
 ### 7. Is tool selection based on keywords, rules, or contextual decision-making?
 
@@ -449,13 +546,13 @@ class RetryStrategy:
 2. **Dependency Graph Construction**:
    ```mermaid
    graph TD
-       A[Customer Data Collection] --> B[Data Validation]
-       A --> C[Data Enrichment]
-       B --> D[Data Transformation]
+       A["Customer Data Collection"] --> B["Data Validation"]
+       A --> C["Data Enrichment"]
+       B --> D["Data Transformation"]
        C --> D
-       D --> E[Report Generation]
-       E --> F[Quality Check]
-       F --> G[Delivery]
+       D --> E["Report Generation"]
+       E --> F["Quality Check"]
+       F --> G["Delivery"]
    ```
 
 3. **Step-by-Step Example**:
@@ -529,6 +626,36 @@ class RetryStrategy:
    - **Partial Replanning**: Only adjust affected sub-branches
    - **Complete Replanning**: Regenerate entire execution path
    - **Incremental Adjustment**: Add/remove specific steps
+
+**Deep Dive: The "Stop Planning" Condition**
+
+**The Risk**:
+An adaptive agent can easily get stuck in a "Plan → Try → Fail → Replan → Try → Fail" loop (Analysis Paralysis).
+
+**Engineering Controls (Circuit Breakers):**
+
+1.  **Max Re-plan Depth**:
+    Hard limit: `MAX_REPLANS = 3`. If the agent cannot solve it after 3 plan modifications, escalate to human or fail gracefully.
+
+2.  **Convergence Check**:
+    If the new plan is >90% similar to a previous failed plan (embedding distance), abort. This prevents cycling between two similar bad ideas.
+
+3.  **Cost Cap**:
+    Track `total_tokens_used`. If `current_cost > max_budget_per_task`, forced termination.
+
+4.  **"Good Enough" Heuristic**:
+    Don't optimize for the perfect plan. If a plan covers the *Critical Path* constraints, execute it.
+
+```python
+def should_stop_planning(plan_history, budget):
+    if len(plan_history) > MAX_REPLANS:
+        return True, "Max replans reached"
+    if budget.is_exhausted():
+        return True, "Budget exceeded"
+    if is_cycling(plan_history):
+        return True, "Detected planning loop"
+    return False, None
+```
 
 ### 16. Is historical execution data used to optimize task decomposition strategies?
 
@@ -606,12 +733,12 @@ class RetryStrategy:
        participant Tool2
        participant Tool3
        
-       Scheduler->>Tool1: Start task A (t=0)
-       Scheduler->>Tool2: Start task B (t=0, parallel)
-       Tool1-->>Scheduler: Complete A (t=5)
-       Scheduler->>Tool3: Start task C (depends on A, t=5)
-       Tool2-->>Scheduler: Complete B (t=8)
-       Tool3-->>Scheduler: Complete C (t=12)
+       Scheduler->>Tool1: "Start task A (t=0)"
+       Scheduler->>Tool2: "Start task B (t=0, parallel)"
+       Tool1-->>Scheduler: "Complete A (t=5)"
+       Scheduler->>Tool3: "Start task C (depends on A, t=5)"
+       Tool2-->>Scheduler: "Complete B (t=8)"
+       Tool3-->>Scheduler: "Complete C (t=12)"
    ```
 
 4. **Deadlock Prevention**:
@@ -1038,6 +1165,30 @@ class AgentMemory:
            self.error = None
    ```
 
+**Deep Dive: Concurrency for Agents - Async vs. Threading**
+
+**The Engineering Reality:**
+Agents are 90% I/O bound (waiting for LLM API, waiting for DB, waiting for Search).
+
+**Recommended Architecture: `asyncio` is King**
+Block Python's GIL with threads is inefficient for high-concurrency agents. Use `asyncio` for the main loop.
+*   **AsyncIO**: For all LLM calls, DB queries, and tool APIs.
+*   **Celery/Redis**: For distributed task queues (breaking out of a single machine).
+*   **ProcessPool**: ONLY for CPU-heavy tasks (e.g., local embedding generation, image resizing).
+
+**Anti-Pattern to Avoid**:
+❌ Starting a new `Thread` for every agent request. This kills memory and context switching.
+✅ Use a `Semaphore` to limit concurrent LLM requests globally (to avoid Rate Limits).
+
+```python
+# Rate-Limited Async Execution
+semaphore = asyncio.Semaphore(10) # 10 concurrent requests max
+
+async def safe_agent_execution(task):
+    async with semaphore:
+        return await agent.run(task)
+```
+
 ### 27. How are tasks scheduled when multiple tasks compete for the same tool or resource?
 
 **Resource Scheduling Algorithms:**
@@ -1230,6 +1381,26 @@ class AgentMemory:
                self.rebuild_indexes()
    ```
 
+       if time_for('reindex'):
+               self.rebuild_indexes()
+   ```
+
+**Deep Dive: The Hidden Killer - Vector Index Degradation**
+
+**The Problem**:
+In Vector Databases (Milvus, Qdrant, Pinecone), "Fragmentation" isn't about RAM—it's about **Graph Quality**.
+Frequent updates/deletes destroy the navigable small-world (HNSW) structure, causing **Recall Drop** (Agent can't find memories it clearly has).
+
+**Engineering Solution**:
+1.  **Soft Deletes**:
+    NEVER hard-delete vectors during the day. Just set a metadata flag `is_deleted: true`.
+    *Why?* Hard deletes trigger expensive graph re-balancing.
+
+2.  **The "Vacuum" Process**:
+    Run a nightly job:
+    *   If `deleted_ratio > 20%`: Trigger `VACUUM` / `Rebuild Index`.
+    *   This restores the HNSW connections and optimal search speed.
+
 ### 31. How to avoid decision bias from long-term operation?
 
 **Bias Prevention Mechanisms:**
@@ -1408,6 +1579,26 @@ class AgentMemory:
        
        return current_understanding
    ```
+
+**Deep Dive: Engineering the "Clarification Loop"**
+
+**The Anti-Pattern**:
+The Agent politely asks "Can you clarify?" in the chat stream, but keeps its internal state as "Running". This leads to timeout or context disconnect.
+
+**The Solution: Explicit State Machine**
+1.  **State Transition**: When ambiguity > threshold, transition from `RUNNING` to `AWAITING_USER_INPUT`.
+2.  **Structured Payloads**: Don't send loose text. Send a `Schema Need` object.
+    ```json
+    {
+      "type": "clarification_request",
+      "fields": [
+        {"name": "date_range", "type": "date_selector", "question": "Which period?"},
+        {"name": "report_format", "type": "enum", "options": ["PDF", "HTML"], "default": "PDF"}
+      ]
+    }
+    ```
+3.  **The "Proactive Assumption"**:
+    Instead of asking open questions ("What date?"), state assumptions: *"I am assuming you mean LAST MONTH. Proceed? [Yes] [Edit]"*. This reduces friction by 10x.
 
 ### 35. Does it directly ask users for supplementary information or try autonomous completion?
 
@@ -1613,6 +1804,8 @@ class CustomAgent:
 1. **Basic Agent Structure**:
    
    > **Pro Tip**: Adopt the [Enterprise Skills Framework](./enterprise-skills-framework.md) to structure capabilities into standardized `SKILL.md` and `scripts/` directories.
+   
+   > **Note**: This is a simplified synchronous example. For production high-concurrency patterns, refer to **Question 26 (AsyncIO)**.
 
    ```python
    class BasicAgent:
@@ -1682,13 +1875,13 @@ class CustomAgent:
 
 ```mermaid
 graph TD
-    A[Application Layer] --> B[Agent Orchestration Layer]
-    B --> C[Decision Layer]
-    B --> D[Tool Scheduling Layer]
-    B --> E[Memory Management Layer]
-    C --> F[LLM Integration Layer]
-    D --> G[Tool Integration Layer]
-    E --> H[Storage Integration Layer]
+    A["Application Layer"] --> B["Agent Orchestration Layer"]
+    B --> C["Decision Layer"]
+    B --> D["Tool Scheduling Layer"]
+    B --> E["Memory Management Layer"]
+    C --> F["LLM Integration Layer"]
+    D --> G["Tool Integration Layer"]
+    E --> H["Storage Integration Layer"]
 ```
 
 **Implementation Details:**

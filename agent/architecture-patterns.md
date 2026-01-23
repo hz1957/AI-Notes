@@ -18,20 +18,20 @@ This strategy significantly reduces:
 
 ```mermaid
 flowchart LR
-  UI[User Chat UI] --> ORCH[Orchestrator<br/>Conversation State + Budget]
-  ORCH --> SM[Small Model (7B~32B)<br/>Intent + Plan Draft + Slot Fill]
-  SM --> RET[Schema Retriever<br/>(BM25/Embedding)]
-  RET --> PLAN[Schema-aware Plan JSON<br/>tables/fields/joins]
-  PLAN --> UI_CONFIRM[User Confirm / Edit]
-  UI_CONFIRM -->|approved| BIG[Large Reasoning Model (685B)<br/>Final SQL + Complex Reasoning]
-  BIG --> VALID[SQL Validator<br/>Parser + Static checks]
-  VALID --> EXEC[DB Sandbox<br/>EXPLAIN / LIMIT 10]
-  EXEC --> FIX[Error/Trace to Fix Loop<br/>(Small model first)]
+  UI["User Chat UI"] --> ORCH["Orchestrator<br/>Conversation State + Budget"]
+  ORCH --> SM["Small Model (7B~32B)<br/>Intent + Plan Draft + Slot Fill"]
+  SM --> RET["Schema Retriever<br/>(BM25/Embedding)"]
+  RET --> PLAN["Schema-aware Plan JSON<br/>tables/fields/joins"]
+  PLAN --> UI_CONFIRM["User Confirm / Edit"]
+  UI_CONFIRM -->|approved| BIG["Large Reasoning Model (685B)<br/>Final SQL + Complex Reasoning"]
+  BIG --> VALID["SQL Validator<br/>Parser + Static checks"]
+  VALID --> EXEC["DB Sandbox<br/>EXPLAIN / LIMIT 10"]
+  EXEC --> FIX["Error/Trace to Fix Loop<br/>(Small model first)"]
   FIX -->|needs deep reasoning| BIG
   FIX -->|simple fix| SM
-  EXEC --> OUT[Result + Explanation]
+  EXEC --> OUT["Result + Explanation"]
 
-  subgraph "Key Principle: Offload Context"
+  subgraph OffloadContext ["Key Principle: Offload Context"]
     SM
     RET
     PLAN
