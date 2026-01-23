@@ -136,6 +136,7 @@ class ReactAgent:
 ```
 
 **Engineering Best Practices:**
+- **Hybrid Architecture Integration**: Use the [Hybrid Reasoning Pattern](./architecture-patterns.md) where a small model handles routine thoughts and a large model handles complex reasoning.
 - **Thought Caching**: Cache reasoning patterns for similar tasks
 - **Action Validation**: Pre-validate tool arguments before execution
 - **Observation Filtering**: Extract only relevant information from tool outputs
@@ -1610,6 +1611,9 @@ class CustomAgent:
 **Core Implementation Guide:**
 
 1. **Basic Agent Structure**:
+   
+   > **Pro Tip**: Adopt the [Enterprise Skills Framework](./enterprise-skills-framework.md) to structure capabilities into standardized `SKILL.md` and `scripts/` directories.
+
    ```python
    class BasicAgent:
        def __init__(self, llm):
