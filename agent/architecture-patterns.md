@@ -17,6 +17,7 @@ This strategy significantly reduces:
 ### 🏗️ Architecture Diagram
 
 ```mermaid
+%%{init: {'theme':'base', 'themeVariables': { 'fontSize':'18px', 'fontFamily':'Arial'}}}%%
 flowchart LR
   UI["User Chat UI"] --> ORCH["Orchestrator<br/>Conversation State + Budget"]
   ORCH --> SM["Small Model (7B~32B)<br/>Intent + Plan Draft + Slot Fill"]
