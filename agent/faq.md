@@ -82,6 +82,25 @@ graph TD
 ```
 👉 **This is the layer used to "prevent the LLM from going off-track".**
 
+**One-Step Execution vs. Decomposition:**
+
+| Choose One-Step When | Choose Decomposition When |
+|---------------------|--------------------------|
+| Single, well-defined objective | Multiple distinct objectives |
+| High-confidence tool match (> 0.85) | Ambiguity score > threshold |
+| Low risk and reversible | Operations requiring validation steps |
+| Historical success rate > 90% | No single tool covers all requirements |
+
+```python
+def execution_strategy(task):
+    if is_trivial(task) and has_confident_tool(task):
+        return "direct"  # One-step
+    elif is_decomposable(task):
+        return "hierarchical"  # Decomposition
+    else:
+        return "iterative_refinement"  # Hybrid
+```
+
 ### 2. What are the criteria for task complexity? Are there clear thresholds?
 
 **Quantitative Metrics:**
@@ -161,32 +180,7 @@ def fast_complexity_check(text):
 - **Level 2**: Atomic Operations (tool-specific actions)
 - **Level 3**: Rare - only for highly complex technical operations
 
-### 4. Under what conditions does an Agent choose one-step execution vs. decomposition?
-
-**One-Step Execution Criteria:**
-- Single, well-defined objective
-- High-confidence tool match (> 0.85)
-- Low risk and reversibility
-- Historical success rate > 90%
-
-**Decomposition Triggers:**
-- **Uncertain Intent**: Ambiguity score > threshold
-- **Tool Limitations**: No single tool covers all requirements
-- **Risk Management**: Operations requiring validation steps
-- **Learning Opportunity**: Novel task types needing exploration
-
-**Hybrid Approach:**
-```python
-def execution_strategy(task):
-    if is_trivial(task) and has_confident_tool(task):
-        return "direct"
-    elif is_decomposable(task):
-        return "hierarchical"
-    else:
-        return "iterative_refinement"
-```
-
-### 5. How do CoT/ReAct participate in decision flow in practical engineering?
+### 4. How do CoT/ReAct participate in decision flow in practical engineering?
 
 **Chain-of-Thought (CoT) Integration:**
 - **Planning Phase**: Generate step-by-step reasoning before tool selection
@@ -221,9 +215,32 @@ class ReactAgent:
 - **Observation Filtering**: Extract only relevant information from tool outputs
 - **Loop Termination**: Set maximum iteration limits to prevent infinite loops
 
+**Advanced CoT Integration Patterns:**
+
+1. **Sequential Integration**:
+   ```python
+   def cot_then_tool(task):
+       # Phase 1: Reasoning until actionable
+       reasoning_steps = []
+       while not is_actionable(current_thought):
+           current_thought = reasoning_step(current_thought)
+           reasoning_steps.append(current_thought)
+       
+       # Phase 2: Execution
+       return execute_tools(extract_actions(reasoning_steps))
+   ```
+
+2. **Interleaved Integration**:
+   - Dynamic cycle of `Reason → Act → Observe → Reason`.
+   - Best for tasks where the next step depends on the result of the previous step (e.g., debugging).
+
+3. **Hierarchical Integration**:
+   - **High-Level CoT**: Strategic planning and decomposition.
+   - **Low-Level Tools**: Tactical execution of specific actions.
+
 ## 2. Tool Selection & Tool Calling
 
-### 6. How does an Agent choose the most suitable tool among multiple available options?
+### 5. How does an Agent choose the most suitable tool among multiple available options?
 
 **Multi-Stage Selection Process:**
 
@@ -282,245 +299,87 @@ As you gather logs, **stop using hardcoded weights**. Move to a "Rerank Model".
 *   **Cross-Encoder (Reranker)**: Precise scoring of top-10 using the heavy feature set above.
 👉 **Pro Tip**: Don't let the LLM pick from 100 tools. Use the Reranker to give the LLM the best 3-5 tools.
 
-### 7. Is tool selection based on keywords, rules, or contextual decision-making?
+### 6. What is the comprehensive strategy for tool selection, prioritization, and loading?
 
-**Hybrid Approach Recommended:**
+**1. Hybrid Selection Logic (The "Funnel"):**
 
-1. **Keyword Matching** (Fast Filter):
-   - Quick elimination of obviously irrelevant tools
-   - Regex patterns on tool names and descriptions
+| Stage | Method | Purpose |
+|-------|--------|---------|
+| **1. Fast Filter** | Keyword/Regex | Eliminate obviously irrelevant tools (e.g., "SQL" tools for "Image" task) |
+| **2. Hard Constraints** | Rule-based | Check schema compatibility, permissions, and parameters |
+| **3. Ranking** | LLM/Embedding | Semantic scoring + Contextual fit |
 
-2. **Rule-Based Filtering** (Medium Precision):
-   - Input/output schema validation
-   - Permission and access control checks
-   - Resource constraint validation
-
-3. **Contextual Decision-Making** (High Precision):
-   - LLM-based semantic understanding
-   - Historical performance analysis
-   - Multi-objective optimization
-
-**Implementation Strategy:**
-```python
-def hybrid_tool_selection(task, tools):
-    # Stage 1: Keyword pre-filter
-    keyword_matches = keyword_filter(task, tools)
-    
-    # Stage 2: Rule-based validation
-    valid_tools = rule_validate(task, keyword_matches)
-    
-    # Stage 3: Contextual ranking (LLM-based)
-    if len(valid_tools) > 1:
-        return llm_rank(task, valid_tools)
-    elif len(valid_tools) == 1:
-        return valid_tools[0]
-    else:
-        return None
-```
-
-### 8. When multiple tools satisfy requirements, how is priority determined?
-
-**Priority Scoring System:**
-
-1. **Performance Metrics** (40%):
-   - Historical success rate
-   - Average execution time
-   - Cost efficiency
-
-2. **Context Fit** (30%):
-   - Schema compatibility
-   - Data format alignment
-   - Dependency satisfaction
-
-3. **User Preferences** (20%):
-   - Explicit user choices
-   - Organizational policies
-   - Usage patterns
-
-4. **Risk Assessment** (10%):
-   - Error handling capabilities
-   - Rollback mechanisms
-   - Side effect profiles
-
-**Tie-Breaking Strategies:**
-- Prefer more specific tools over general ones
-- Choose tools with better error handling
-- Prioritize tools with monitoring and logging
-- Select tools with lower resource requirements
-
-### 9. Does the Agent support dynamic tool loading based on task type?
-
-**Dynamic Tool Loading Architecture:**
-
-1. **Tool Registry System**:
-   ```python
-   class ToolRegistry:
-       def __init__(self):
-           self.tools = {}
-           self.index = build_tool_index()
-       
-       def load_tools_for_task(self, task_type):
-           relevant_tools = self.index.query(task_type)
-           return [self.tools[t] for t in relevant_tools]
-   ```
-
-2. **Lazy Loading Strategy**:
-   - Load tool metadata at startup
-   - Load tool implementations on-demand
-   - Unload unused tools after timeout
-
-3. **Task-Based Tool Sets**:
-   - Predefined tool collections for common task types
-   - Dynamic composition for novel task combinations
-   - Tool dependency management
-
-**Benefits:**
-- Reduced memory footprint
-- Faster initialization
-- Easier tool versioning
-- Better isolation and security
-
-### 10. What is the Agent's handling strategy when tool calls fail?
-
-**Failure Classification & Response:**
-
-1. **Transient Errors** (Retry with backoff):
-   - Network timeouts
-   - Temporary service unavailability
-   - Rate limiting
-
-2. **Permanent Errors** (Immediate alternative):
-   - Invalid parameters
-   - Permission denied
-   - Resource not found
-
-3. **Partial Failures** (Degradation):
-   - Incomplete results
-   - Missing optional data
-   - Fallback to default values
-
-**Error Recovery Framework:**
-```python
-def handle_tool_failure(error, context):
-    if is_transient(error):
-        return retry_with_backoff(error, context)
-    elif is_recoverable(error):
-        return try_alternative_tool(error, context)
-    elif is_partial(error):
-        return extract_partial_results(error, context)
-    else:
-        return escalate_to_human(error, context)
-```
-
-### 11. Are different error types distinguished (parameter errors / timeouts / permissions / logic errors)?
-
-**Error Taxonomy & Handling:**
-
-| Error Type | Detection Method | Recovery Strategy |
-|------------|------------------|-------------------|
-| **Parameter Errors** | Schema validation, type checking | Correct and retry, request clarification |
-| **Timeout Errors** | Execution time monitoring | Retry with longer timeout, try alternative |
-| **Permission Errors** | Access control checks | Request permissions, try alternative tool |
-| **Logic Errors** | Result validation | Adjust approach, escalate to human |
-| **Network Errors** | Connection status | Retry with exponential backoff |
-| **Rate Limiting** | HTTP 429 responses | Implement queue, delay retry |
-
-**Implementation Example:**
-```python
-class ErrorHandler:
-    def classify_error(self, error):
-        if isinstance(error, ValidationError):
-            return ErrorType.PARAMETER
-        elif isinstance(error, TimeoutError):
-            return ErrorType.TIMEOUT
-        elif isinstance(error, PermissionError):
-            return ErrorType.PERMISSION
-        # ... more classifications
-    
-    def handle_error(self, error, context):
-        error_type = self.classify_error(error)
-        handler = self.handlers[error_type]
-        return handler(error, context)
-```
-
-### 12. Do different error types correspond to different retry or alternative strategies?
-
-**Strategy Matrix:**
-
-1. **Parameter Errors**:
-   - **Strategy**: Parameter correction + single retry
-   - **Fallback**: Request user clarification
-   - **No blind retry**: Won't fix invalid parameters
-
-2. **Timeout Errors**:
-   - **Strategy**: Exponential backoff (1s, 2s, 4s, 8s)
-   - **Max Retries**: 3 attempts
-   - **Fallback**: Try alternative tool or method
-
-3. **Permission Errors**:
-   - **Strategy**: No retry (won't succeed)
-   - **Immediate Action**: Request permissions or alternative
-   - **Fallback**: Escalate to user/admin
-
-4. **Logic Errors**:
-   - **Strategy**: Analyze and adjust approach
-   - **Max Attempts**: 2 with different strategies
-   - **Fallback**: Human intervention
-
-5. **Network/Temporary Errors**:
-   - **Strategy**: Exponential backoff with jitter
-   - **Max Retries**: 5 attempts
-   - **Fallback**: Queue for later processing
+**2. Priority Scoring System (Weights):**
+- **Performance (40%)**: Historical success rate, latency.
+- **Context Fit (30%)**: Schema match, data format alignment.
+- **User Preference (20%)**: Explicit choices or policy constraints.
+- **Risk (10%)**: Side-effect profile (Read-only > Write).
 
 **Implementation Framework:**
 ```python
-class RetryStrategy:
-    def __init__(self):
-        self.strategies = {
-            ErrorType.PARAMETER: SingleRetryWithCorrection(),
-            ErrorType.TIMEOUT: ExponentialBackoff(max_retries=3),
-            ErrorType.PERMISSION: NoRetry(escalate=True),
-            ErrorType.LOGIC: AdaptiveRetry(max_retries=2),
-            ErrorType.NETWORK: ExponentialBackoff(max_retries=5, jitter=True)
-        }
+def select_best_tool(task, tools):
+    # 1. Filter
+    candidates = [t for t in tools if passes_hard_constraints(t, task)]
+    
+    # 2. Score
+    ranked = []
+    for tool in candidates:
+        score = (
+            semantic_similarity(task, tool) * 0.4 +
+            capability_match(task, tool) * 0.3 +
+            historical_success(tool) * 0.2 +
+            context_fit(task, tool) * 0.1
+        )
+        ranked.append((tool, score))
+    
+    # 3. Dynamic Loading (Lazy Load)
+    best_tool = max(ranked, key=lambda x: x[1])[0]
+    return tool_registry.load(best_tool.id)
 ```
 
-### 13. When tool call results don't meet expectations, will the Agent self-correct?
+**4. Dynamic Tool Loading Architecture:**
+- **Tool Registry**: Mappings of `TaskType -> [Tools]`.
+- **Lazy Loading**: Load metadata at startup, implementation on-demand.
+- **Benefits**: Reduced memory footprint, faster init.
 
-**Self-Correction Mechanisms:**
+### 7. How does the Agent handle tool failures, error types, and self-correction?
 
-1. **Result Validation**:
-   ```python
-   def validate_result(result, expectations):
-       if not meets_schema(result, expectations.schema):
-           return ValidationFailure("Schema mismatch")
-       if not meets_quality(result, expectations.quality):
-           return ValidationFailure("Quality threshold not met")
-       if contains_hallucinations(result):
-           return ValidationFailure("Potential hallucinations detected")
-       return ValidationSuccess()
-   ```
+**1. Failure Taxonomy & Response Strategy:**
 
-2. **Correction Strategies**:
-   - **Parameter Adjustment**: Tune tool parameters and retry
-   - **Tool Substitution**: Try alternative tool
-   - **Prompt Refinement**: Improve instruction clarity
-   - **Multi-Step Approach**: Break into simpler operations
+| Error Type | Detection | Strategy | Max Retries |
+|------------|-----------|----------|-------------|
+| **Transient** (Network) | Timeout / 5xx | Exponential Backoff + Jitter | 5 |
+| **Logic** (Bad Result) | Validation Fail | **Self-Correction** (Parameter adjustment) | 2 |
+| **Permission** | 403 / Access Denied | Stop & Escalate (No retry) | 0 |
+| **Parameter** | Schema Validation | Single Retry with Correction | 1 |
 
-3. **Learning Loop**:
-   ```python
-   def self_correct(task, result, expectations):
-       validation = validate_result(result, expectations)
-       if validation.failed:
-           correction_strategy = select_correction(validation)
-           corrected_result = correction_strategy.execute(task, result)
-           
-           # Log for learning
-           log_failure_case(task, result, validation, corrected_result)
-           
-           return corrected_result
-       return result
-   ```
+**2. Self-Correction Mechanism:**
+When a tool executes successfully but returns "bad data" (Logic Error):
+1. **Validate**: Check result against schema/quality constraints.
+2. **Diagnose**: Is it a prompt issue? Parameter issue?
+3. **Correct**:
+    - **Refinement**: Tune parameters.
+    - **Substitution**: Try an alternative tool.
+    - **Decomposition**: Break into simpler steps.
+
+**Implementation Framework:**
+```python
+def robust_execute(tool, params, context):
+    try:
+        result = tool.execute(params)
+        # Phase 1: Logic Validation (Self-Correction)
+        if not validate(result):
+             return self_correct_loop(tool, params, result)
+        return result
+        
+    except Exception as e:
+        # Phase 2: System Error Handling
+        error_type = classify_error(e)
+        if error_type == ErrorType.TRANSIENT:
+             return retry_with_backoff(tool, params)
+        elif error_type == ErrorType.PERMISSION:
+             raise EscalateToHuman(e)
+```
 
 4. **Quality Metrics**:
    - Completeness: All required fields present
@@ -530,7 +389,7 @@ class RetryStrategy:
 
 ## 3. Task Decomposition & Flow Control
 
-### 14. How is a complex business task (e.g., organizing customer data and generating reports) decomposed into executable steps?
+### 8. How is a complex business task (e.g., organizing customer data and generating reports) decomposed into executable steps?
 
 **Systematic Decomposition Framework:**
 
@@ -585,7 +444,7 @@ class RetryStrategy:
                    executed.add(step)
    ```
 
-### 15. Is decomposition logic generated once or dynamically adjusted based on intermediate results?
+### 9. Is decomposition logic generated once or dynamically adjusted based on intermediate results?
 
 **Adaptive Decomposition Strategy:**
 
@@ -659,7 +518,7 @@ def should_stop_planning(plan_history, budget):
     return False, None
 ```
 
-### 16. Is historical execution data used to optimize task decomposition strategies?
+### 10. Is historical execution data used to optimize task decomposition strategies?
 
 **Learning from History:**
 
@@ -699,7 +558,7 @@ def should_stop_planning(plan_history, budget):
                return self.default_decomposition(task)
    ```
 
-### 17. How are timing conflicts handled during cross-tool execution?
+### 11. How are timing conflicts handled during cross-tool execution?
 
 **Concurrency Control Mechanisms:**
 
@@ -749,7 +608,7 @@ def should_stop_planning(plan_history, budget):
    - Priority inheritance
    - Rollback capabilities
 
-### 18. Does previous step failure affect subsequent steps? How to rollback or re-plan?
+### 12. Does previous step failure affect subsequent steps? How to rollback or re-plan?
 
 **Failure Propagation Management:**
 
@@ -802,7 +661,7 @@ def should_stop_planning(plan_history, budget):
 
 ## 4. Memory Mechanisms & Vector Databases
 
-### 19. What content is stored in Agent's long-term vs. short-term memory?
+### 13. What content is stored in Agent's long-term vs. short-term memory?
 
 **Memory Architecture Design:**
 
@@ -838,7 +697,7 @@ class AgentMemory:
         }
 ```
 
-### 20. Is a vector database used? What information is primarily stored?
+### 14. Is a vector database used? What information is primarily stored?
 
 **Vector Database Applications:**
 
@@ -879,7 +738,7 @@ class AgentMemory:
    - **Context-Based**: Retrieve relevant background information
    - **Pattern-Based**: Identify analogous situations
 
-### 21. How is memory redundancy avoided?
+### 15. How is memory redundancy avoided?
 
 **Deduplication Strategies:**
 
@@ -925,7 +784,7 @@ class AgentMemory:
    - **Temporal Tags**: Freshness of information
    - **Usage Patterns**: Frequency of access
 
-### 22. How to prevent incorrect or outdated memories from affecting subsequent decisions?
+### 16. How to prevent incorrect or outdated memories from affecting subsequent decisions?
 
 **Memory Validation & Maintenance:**
 
@@ -976,7 +835,7 @@ class AgentMemory:
    - **Consistency Checks**: Flag logical contradictions
    - **External Validation**: Check against authoritative sources
 
-### 23. What are the trigger conditions for memory cleanup?
+### 17. What are the trigger conditions for memory cleanup?
 
 **Cleanup Trigger Mechanisms:**
 
@@ -1009,7 +868,7 @@ class AgentMemory:
    - **Outdated**: Old and potentially obsolete
    - **Redundant**: Duplicate or superseded information
 
-### 24. How to preserve critical information during memory cleanup?
+### 18. How to preserve critical information during memory cleanup?
 
 **Selective Retention Strategies:**
 
@@ -1064,7 +923,7 @@ class AgentMemory:
    - **Version History**: Track changes over time
    - **Recovery Plans**: Restore mechanisms for critical data
 
-### 25. Are there quantitative thresholds or strategies for memory cleanup?
+### 19. Are there quantitative thresholds or strategies for memory cleanup?
 
 **Quantitative Cleanup Strategies:**
 
@@ -1126,7 +985,7 @@ class AgentMemory:
 
 ## 5. Multi-Task & Concurrent Execution
 
-### 26. How does the Agent handle concurrent multi-task execution?
+### 20. How does the Agent handle concurrent multi-task execution?
 
 **Concurrency Architecture:**
 
@@ -1191,7 +1050,7 @@ async def safe_agent_execution(task):
         return await agent.run(task)
 ```
 
-### 27. How are tasks scheduled when multiple tasks compete for the same tool or resource?
+### 21. How are tasks scheduled when multiple tasks compete for the same tool or resource?
 
 **Resource Scheduling Algorithms:**
 
@@ -1239,7 +1098,7 @@ async def safe_agent_execution(task):
            return False
    ```
 
-### 28. Is there a task priority mechanism?
+### 22. Is there a task priority mechanism?
 
 **Priority System Design:**
 
@@ -1280,7 +1139,7 @@ async def safe_agent_execution(task):
    - **Decay**: Decrease priority of long-running tasks
    - **Boost**: Temporary priority for specific situations
 
-### 29. Do concurrent tasks share memory? How is isolation implemented?
+### 23. Do concurrent tasks share memory? How is isolation implemented?
 
 **Memory Isolation Strategies:**
 
@@ -1339,7 +1198,7 @@ async def safe_agent_execution(task):
 
 ## 6. Long-Running & Stability Risks
 
-### 30. How is memory fragmentation handled during long-term Agent operation?
+### 24. How is memory fragmentation handled during long-term Agent operation?
 
 **Fragmentation Management Strategies:**
 
@@ -1403,7 +1262,7 @@ Frequent updates/deletes destroy the navigable small-world (HNSW) structure, cau
     *   If `deleted_ratio > 20%`: Trigger `VACUUM` / `Rebuild Index`.
     *   This restores the HNSW connections and optimal search speed.
 
-### 31. How to avoid decision bias from long-term operation?
+### 25. How to avoid decision bias from long-term operation?
 
 **Bias Prevention Mechanisms:**
 
@@ -1445,7 +1304,7 @@ Frequent updates/deletes destroy the navigable small-world (HNSW) structure, cau
    - **Devil's Advocate**: Challenge own assumptions
    - **External Validation**: Verify decisions independently
 
-### 32. Are there monitoring or evaluation mechanisms for Agent decision quality?
+### 26. Are there monitoring or evaluation mechanisms for Agent decision quality?
 
 **Quality Monitoring Systems:**
 
@@ -1494,7 +1353,7 @@ Frequent updates/deletes destroy the navigable small-world (HNSW) structure, cau
        return PerformanceReport(results)
    ```
 
-### 33. Does the system support self-reflection or failure post-analysis?
+### 27. Does the system support self-reflection or failure post-analysis?
 
 **Self-Reflection Mechanisms:**
 
@@ -1541,7 +1400,7 @@ Frequent updates/deletes destroy the navigable small-world (HNSW) structure, cau
 
 ## 7. User Requirement Understanding
 
-### 34. How does the Agent handle unclear or vague user requirements?
+### 28. How does the Agent handle unclear or vague user requirements?
 
 **Ambiguity Resolution Strategies:**
 
@@ -1602,7 +1461,7 @@ The Agent politely asks "Can you clarify?" in the chat stream, but keeps its int
 3.  **The "Proactive Assumption"**:
     Instead of asking open questions ("What date?"), state assumptions: *"I am assuming you mean LAST MONTH. Proceed? [Yes] [Edit]"*. This reduces friction by 10x.
 
-### 35. Does it directly ask users for supplementary information or try autonomous completion?
+### 29. Does it directly ask users for supplementary information or try autonomous completion?
 
 **Hybrid Approach**:
 
@@ -1630,7 +1489,7 @@ The Agent politely asks "Can you clarify?" in the chat stream, but keeps its int
    - **Multiple Options**: Several valid interpretations
    - **User Preference**: User prefers explicit confirmation
 
-### 36. How does the Agent judge "insufficient information but can continue execution"?
+### 30. How does the Agent judge "insufficient information but can continue execution"?
 
 **Risk Assessment Framework**:
 
@@ -1667,7 +1526,7 @@ The Agent politely asks "Can you clarify?" in the chat stream, but keeps its int
        return response
    ```
 
-### 37. Is hypothesis generation and verification-based execution supported?
+### 31. Is hypothesis generation and verification-based execution supported?
 
 **Hypothesis-Driven Execution:**
 
@@ -1717,7 +1576,7 @@ The Agent politely asks "Can you clarify?" in the chat stream, but keeps its int
 
 ## 8. Engineering Implementation & Framework Understanding
 
-### 38. What roles do LangChain/AutoGen play in projects?
+### 32. What roles do LangChain/AutoGen play in projects?
 
 **Framework Roles & Responsibilities:**
 
@@ -1755,7 +1614,7 @@ The Agent politely asks "Can you clarify?" in the chat stream, but keeps its int
    )
    ```
 
-### 39. Which capabilities are framework-provided vs. custom-implemented?
+### 33. Which capabilities are framework-provided vs. custom-implemented?
 
 **Capability Breakdown:**
 
@@ -1799,7 +1658,7 @@ class CustomAgent:
         return result
 ```
 
-### 40. How to implement core capabilities without using existing Agent frameworks?
+### 34. How to implement core capabilities without using existing Agent frameworks?
 
 **Core Implementation Guide:**
 
@@ -1871,7 +1730,7 @@ class CustomAgent:
            raise ValueError(f"Tool {tool_name} not found")
    ```
 
-### 41. At which layer are decision logic, tool scheduling, and memory management implemented?
+### 35. At which layer are decision logic, tool scheduling, and memory management implemented?
 
 **Layered Architecture:**
 
@@ -1943,55 +1802,7 @@ graph TD
 
 ## 9. Theory & Engineering Integration
 
-### 42. How do CoT and tool calling collaborate in engineering practice?
-
-**Integration Patterns:**
-
-1. **Sequential Integration**:
-   ```python
-   def cot_then_tool(task):
-       # Phase 1: Chain-of-Thought reasoning
-       reasoning_steps = []
-       current_thought = task
-       
-       while not is_actionable(current_thought):
-           next_thought = reasoning_step(current_thought)
-           reasoning_steps.append(next_thought)
-           current_thought = next_thought
-       
-       # Phase 2: Tool execution based on reasoning
-       action_plan = extract_actions(reasoning_steps)
-       results = execute_tools(action_plan)
-       
-       return results
-   ```
-
-2. **Interleaved Integration**:
-   ```python
-   def interleaved_cot_tool(task):
-       results = []
-       current_state = task
-       
-       while not task_complete(current_state):
-           # Reason about current state
-           thought = generate_thought(current_state)
-           
-           # Decide on action
-           if requires_tool(thought):
-               tool_result = execute_tool(thought.suggested_tool)
-               results.append(tool_result)
-               current_state = update_state(current_state, tool_result)
-           else:
-               current_state = thought.next_state
-       
-       return results
-   ```
-
-3. **Hierarchical Integration**:
-   - **High-Level CoT**: Strategic planning and decomposition
-   - **Low-Level Tools**: Tactical execution of specific actions
-
-### 43. How are decision models mapped to executable code logic?
+### 36. How are decision models mapped to executable code logic?
 
 **Model-to-Code Mapping:**
 
@@ -2046,7 +1857,7 @@ graph TD
    - **Sandboxing**: Execute in controlled environment
    - **Rollback**: Maintain undo capability
 
-### 44. What trade-offs or simplifications are made when theoretical methods are applied in practice?
+### 37. What trade-offs or simplifications are made when theoretical methods are applied in practice?
 
 **Practical Compromises:**
 
