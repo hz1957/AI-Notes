@@ -1,6 +1,8 @@
 # Agent Development FAQ
 
-> Comprehensive answers to 44 key questions about AI Agent development, covering decision logic, tool selection, task decomposition, memory systems, and engineering implementation.
+> Comprehensive answers to questions about AI Agent development, covering decision logic, tool selection, task decomposition, memory systems, and engineering implementation.
+
+**What's Inside**: This FAQ systematically covers the full lifecycle of AI Agent development—from theory to production. Topics include: how Agents determine whether tasks need decomposition and quantitative complexity thresholds (with engineering approaches vs. LLM black-box trade-offs); multi-stage tool selection mechanisms (semantic matching, rule-based filtering, contextual ranking) along with failure retry and self-correction strategies; DAG-based task decomposition, dependency management, dynamic replanning, and rollback mechanisms; short-term vs. long-term memory architecture, vector database storage/retrieval optimization, and critical data retention policies; multi-task concurrency scheduling, resource contention, and memory isolation; stability risks in long-running scenarios (decision bias, vector index degradation) with monitoring solutions; ambiguous requirement handling (proactive assumptions vs. structured clarification); framework comparisons (LangChain, AutoGen, LlamaIndex) and layered custom implementations; and the practical simplifications made when applying theoretical methods (CoT, ReAct) in production. A core theme throughout: **mature systems should engineer scheduling logic explicitly, rather than relying entirely on LLM black boxes**.
 
 ## 1. Basic Understanding & Decision Logic
 

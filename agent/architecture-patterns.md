@@ -17,26 +17,32 @@ This strategy significantly reduces:
 ### 🏗️ Architecture Diagram
 
 ```mermaid
-%%{init: {'theme':'base', 'themeVariables': { 'fontSize':'18px', 'fontFamily':'Arial'}}}%%
-flowchart LR
-  UI["User Chat UI"] --> ORCH["Orchestrator<br/>Conversation State + Budget"]
-  ORCH --> SM["Small Model (7B~32B)<br/>Intent + Plan Draft + Slot Fill"]
-  SM --> RET["Schema Retriever<br/>(BM25/Embedding)"]
-  RET --> PLAN["Schema-aware Plan JSON<br/>tables/fields/joins"]
-  PLAN --> UI_CONFIRM["User Confirm / Edit"]
-  UI_CONFIRM -->|approved| BIG["Large Reasoning Model (685B)<br/>Final SQL + Complex Reasoning"]
-  BIG --> VALID["SQL Validator<br/>Parser + Static checks"]
-  VALID --> EXEC["DB Sandbox<br/>EXPLAIN / LIMIT 10"]
-  EXEC --> FIX["Error/Trace to Fix Loop<br/>(Small model first)"]
-  FIX -->|needs deep reasoning| BIG
-  FIX -->|simple fix| SM
-  EXEC --> OUT["Result + Explanation"]
-
-  subgraph OffloadContext ["Key Principle: Offload Context"]
-    SM
-    RET
-    PLAN
+flowchart TD
+  subgraph Row1 [" "]
+    direction LR
+    UI["Chat UI"] --> ORCH["Orchestrator"] --> SM["Small Model<br/>7B-32B"]
   end
+  
+  subgraph Row2 [" "]
+    direction LR
+    RET["Schema Retriever"] --> PLAN["Plan JSON"] --> UI_CONFIRM["User Confirm"]
+  end
+  
+  subgraph Row3 [" "]
+    direction LR
+    BIG["Large Model<br/>685B"] --> VALID["SQL Validator"] --> EXEC["DB Sandbox"]
+  end
+  
+  subgraph Row4 [" "]
+    direction LR
+    FIX["Fix Loop"] --> OUT["Result"]
+  end
+
+  SM --> RET
+  UI_CONFIRM -->|"approved"| BIG
+  EXEC --> FIX
+  FIX -->|"complex"| BIG
+  FIX -->|"simple"| SM
 ```
 
 ### 🧠 Key Strategies

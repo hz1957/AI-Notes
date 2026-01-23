@@ -17,23 +17,22 @@ In workloads with **40k+ long context + 685B + multi-agent**, prefill (the step 
 
 ### Bottleneck Flowchart
 ```mermaid
-%%{init: {'theme':'base', 'themeVariables': { 'fontSize':'14px'}}}%%
 flowchart TD
-  U["20 agents x 10-20 calls"] --> GW["Gateway / SGLang Frontend"]
-  GW -->|appears: no queue| SCHED["SGLang Scheduler<br/>continuous batching"]
-  SCHED --> PREFILL["Prefill: ingest ~40k ctx<br/>Attention heavy"]
-  PREFILL --> KV["KV cache write/read<br/>HBM bandwidth bound"]
-  KV --> TP["Tensor Parallel AllReduce"]
-  TP --> PP["Pipeline Parallel Send/Recv"]
-  PP --> GPU["GPU compute kernels<br/>(FlashAttn/GEMM)"]
-  GPU --> OUT["Token stream / response"]
+  U["20 Agents"] --> GW["Gateway"]
+  GW -->|"no queue?"| SCHED["Scheduler"]
+  SCHED --> PREFILL["Prefill<br/>40k ctx"]
+  PREFILL --> KV["KV Cache<br/>HBM bound"]
+  KV --> TP["TP AllReduce"]
+  TP --> PP["PP Send/Recv"]
+  PP --> GPU["GPU Kernels"]
+  GPU --> OUT["Response"]
 
-  subgraph LogView ["Your logs typically only show this"]
+  subgraph LogView ["Visible in Logs"]
     GW
     SCHED
   end
 
-  subgraph RealBottleneck ["Real bottlenecks occur here (logs don't directly report 'queuing')"]
+  subgraph RealBottleneck ["Hidden Bottlenecks"]
     PREFILL
     KV
     TP

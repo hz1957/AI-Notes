@@ -35,9 +35,9 @@ export default withMermaid({
           text: 'AI Agents',
           items: [
             { text: 'Overview', link: '/agent/' },
-            { text: 'Practical Lessons / Case Studies', link: '/agent/practical-lessons' },
             { text: 'Architecture Patterns', link: '/agent/architecture-patterns' },
             { text: 'Enterprise Skills Framework', link: '/agent/enterprise-skills-framework' },
+            { text: 'Practical Lessons / Case Studies', link: '/agent/practical-lessons' },
             { text: 'Agent FAQ', link: '/agent/faq' }
           ]
         }
