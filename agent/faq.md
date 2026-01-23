@@ -467,7 +467,7 @@ def robust_execute(tool, params, context):
            if needs_replanning(result):
                updated_plan = replan(
                    current_plan, 
- executed_steps, 
+                   executed_steps, 
                    result
                )
                current_plan = updated_plan
