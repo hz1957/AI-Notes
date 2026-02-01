@@ -47,6 +47,7 @@ export default withMermaid({
           text: 'LLM Inference Optimization',
           items: [
             { text: 'Generation Parameters', link: '/inference/generation-parameters' },
+            { text: 'Positional Encodings (RoPE/ALiBi)', link: '/inference/positional-encoding' },
             { text: 'KV Cache Strategies', link: '/inference/kv-cache' },
             { text: 'Model Optimization', link: '/inference/model-optimization' },
             { text: 'Parallelism Strategies', link: '/inference/parallelism' },
